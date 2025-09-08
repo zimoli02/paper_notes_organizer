@@ -6,12 +6,26 @@ import subprocess
 from datetime import datetime
 from jinja2 import Template
 
+
 def parse_note(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
-    fields = dict(re.findall(r'^(\w[\w\s]*?):\s*(.*?)$', content, re.MULTILINE))
-    fields = {k.strip(): v.strip() for k, v in fields.items()}
-    fields['Keywords'] = [kw.strip().lower() for kw in fields.get('Keywords', '').split(',')]
+
+    # Each field: key before ":", value spans until a final "." before the next key or end-of-file
+    pattern = r'(?smi)^\s*([^:]+):\s*(.+?)\.\s*(?=^[^:]+:|\Z)'
+    matches = re.findall(pattern, content)
+
+    fields = {k.strip(): v.strip() for k, v in matches}
+
+    # Remove trailing "." if any slipped through
+    for k, v in fields.items():
+        if v.endswith('.'):
+            fields[k] = v[:-1].strip()
+            
+    # Process keywords (split by commas, strip and lowercase)
+    fields['Keywords'] = [kw.strip().lower() for kw in fields['Keywords'].split(',')]
+
+    #print(fields['Keywords'])
     return fields
 
 def load_config(path="config.yaml"):
@@ -29,17 +43,26 @@ def render_latex(entries, template_path, mode):
     with open(template_path, 'r', encoding='utf-8') as f:
         template_text = f.read()
 
-    entry_template_text = re.search(r'% START_ENTRIES(.*?)% END_ENTRIES', template_text, re.DOTALL).group(1)
+    # Extract the per-entry block
+    m = re.search(r'% START_ENTRIES(.*?)% END_ENTRIES', template_text, re.DOTALL)
+    if not m:
+        raise RuntimeError("Could not find START_ENTRIES/END_ENTRIES markers in template.")
+    entry_template_text = m.group(1)
+
     entry_template = Template(entry_template_text)
 
     filled_entries = []
     for idx, entry in enumerate(entries, start=1):
-        entry['index'] = idx
-        filled_entries.append(entry_template.render(**entry))
+        entry = dict(entry)
+        entry["index"] = idx
+        filled_entries.append(entry_template.render(entry=entry))
 
+    replacement_block = "% START_ENTRIES\n" + "\n".join(filled_entries) + "\n% END_ENTRIES"
+
+    # IMPORTANT: use a lambda so backslashes in LaTeX are not treated as escapes
     final_text = re.sub(
         r'% START_ENTRIES.*?% END_ENTRIES',
-        "% START_ENTRIES\n" + "\n".join(filled_entries) + "\n% END_ENTRIES",
+        lambda _: replacement_block,
         template_text,
         flags=re.DOTALL
     )
@@ -47,7 +70,6 @@ def render_latex(entries, template_path, mode):
     tex_filename = f"filtered_notes_{mode}.tex"
     with open(tex_filename, 'w', encoding='utf-8') as f:
         f.write(final_text)
-
     return tex_filename
 
 def compile_latex(tex_file):

@@ -71,4 +71,4 @@ python exporter.py
   - Filter them based on keywords in `config.yaml`
   - Sort them by Year
   - Render them using the specified LaTeX template (`full_template.tex` or `simple_template.tex`)
-  - Compile a clean PDF file: `filtered_notes_full.pdf` or `filtered_notes_simple.pdf`
+  - Compile a clean PDF file: `<current_date>_<searched_keywords>.pdf`

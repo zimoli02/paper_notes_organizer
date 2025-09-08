@@ -6,6 +6,8 @@ import subprocess
 from datetime import datetime
 from jinja2 import Template
 
+def format_keywords(keywords):
+    return '_'.join(k.strip().replace(' ', '_') for k in keywords)
 
 def parse_note(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -39,7 +41,7 @@ def filter_notes(notes, required_keywords):
             filtered.append(note)
     return sorted(filtered, key=lambda x: int(x.get('Year', 0)))
 
-def render_latex(entries, template_path, mode):
+def render_latex(entries, template_path, mode, search_keywords):
     with open(template_path, 'r', encoding='utf-8') as f:
         template_text = f.read()
 
@@ -67,15 +69,23 @@ def render_latex(entries, template_path, mode):
         flags=re.DOTALL
     )
 
-    tex_filename = f"filtered_notes_{mode}.tex"
+    date_str = datetime.now().strftime('%Y%m%d')
+    kw_str = format_keywords(search_keywords) if search_keywords else 'no_keywords'
+    base_name = f"{date_str}_{kw_str}"
+
+    tex_filename = f"{base_name}.tex"
+    pdf_filename = f"{base_name}.pdf"
+
     with open(tex_filename, 'w', encoding='utf-8') as f:
         f.write(final_text)
+    
     return tex_filename
 
 def compile_latex(tex_file):
     subprocess.run(["pdflatex", tex_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     pdf_name = tex_file.replace('.tex', '.pdf')
     print(f"✅ PDF generated: {pdf_name}")
+    return pdf_name
 
 def main():
     config = load_config()
@@ -94,8 +104,10 @@ def main():
         return
 
     template_file = f"templates/{export_mode}_template.tex"
-    tex_file = render_latex(filtered_notes, template_file, export_mode)
-    compile_latex(tex_file)
+    tex_file = render_latex(filtered_notes, template_file, export_mode, keyword_filter)
+    
+    pdf_file = compile_latex(tex_file)
+    print(f"\n📄 Final PDF saved as: {pdf_file}")
 
 if __name__ == "__main__":
     main()

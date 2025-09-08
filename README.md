@@ -7,7 +7,7 @@ A lightweight, keyword-searchable system for maintaining structured notes on aca
 
 ```bash
 paper-reading-log/
-├── notes/                  # ← Your paper notes (.txt), ignored by Git
+├── notes/                  # ← Your paper notes (.txt)
 ├── templates/              # LaTeX templates for PDF rendering
 │   ├── full_template.tex
 │   └── simple_template.tex
@@ -31,7 +31,7 @@ Each paper should have its own `.txt` file inside the `notes/` directory.
 - Multi-line values are supported as long as they end with a single `.` on the last line.
 - Field names are case-sensitive (e.g., `First_Author`, not `First Author`).
 
-### ✅ Example note file: `DelRosario2025.txt`
+### ✅ Example note file: `Me2025.txt`
 
 Year: 2025.
 First_Author: Me.
